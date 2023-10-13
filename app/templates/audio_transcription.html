@@ -1,0 +1,43 @@
+{% extends "base.html" %} {% block title %} Audio Transcript {% endblock %} {%
+block content %}
+<link
+  href="{{ url_for('static', filename='css/audio.css') }}"
+  rel="stylesheet"
+/>
+<body>
+  <div class="container mt-5">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Audio Player</h5>
+            <button
+              id="startTalking"
+              class="btn btn-outline-secondary"
+              onclick="startTalking()"
+            >
+              Start Talking
+            </button>
+            <!-- <audio controls>
+              <source src="audio.mp3" type="audio/mpeg" />
+              Your browser does not support the audio tag.
+            </audio> -->
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Converted Text</h5>
+
+            <p id="transcription" class="card-text">
+              The converted text will be displayed here.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+
+{% endblock %}

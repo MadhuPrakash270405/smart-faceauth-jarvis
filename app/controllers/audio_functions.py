@@ -1,12 +1,32 @@
 import os
+import random
 from pydub import AudioSegment
 import speech_recognition as sr
+import pyttsx3
 from pydub.silence import split_on_silence
 
-recognizer = sr.Recognizer()
+
+def get_all_voices(engine):
+    voices = engine.getProperty("voices")
+    for voice in voices:
+        print(f"Trying voice: {voice.name} - {voice.id}")
+
+
+def text_to_voice(text):
+    engine = pyttsx3.init()
+    voices = engine.getProperty("voices")
+    selected_voice = random.choice(voices)
+    print(selected_voice)
+    engine.setProperty("voice", selected_voice.id)
+    # Adjusting the rate and volume
+    engine.setProperty("rate", 185)  # Adjust the speed as needed
+    engine.setProperty("volume", 1)  # Adjust the volume level (0.0 to 1.0)
+    engine.say("Hello, how may I assist you today?")
+    engine.runAndWait()
 
 
 def voice_to_text():
+    recognizer = sr.Recognizer()
     """recording the sound"""
     with sr.Microphone() as source:
         print("Adjusting noise ")
@@ -19,9 +39,11 @@ def voice_to_text():
         print("Recognizing the text")
         text = recognizer.recognize_google(recorded_audio, language="en-US")
         print("Decoded Text : {}".format(text))
-
-    except Exception as ex:
-        print(ex)
+        return {"transcription": text}
+    except sr.UnknownValueError:
+        return {"error": "Could not understand audio"}
+    except sr.RequestError or Exception as e:
+        return {"error": "Could not request results; {0}".format(e)}
 
 
 def load_chunks(filename):
@@ -33,6 +55,7 @@ def load_chunks(filename):
 
 
 def get_audio_lyrics(audio_file):
+    recognizer = sr.Recognizer()
     for audio_chunk in load_chunks(audio_file):
         audio_chunk.export("temp", format="wav")
         with sr.AudioFile("temp") as source:

@@ -1,0 +1,22 @@
+body {
+  background-color: #121212;
+  color: white;
+}
+
+.card {
+  background-color: #282828;
+  border: none;
+}
+
+.card-title {
+  color: #1db954; /* Spotify Green */
+}
+
+audio {
+  width: 100%;
+  border-radius: 5px;
+}
+
+#convertedText {
+  color: #b3b3b3;
+}

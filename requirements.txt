@@ -8,5 +8,7 @@ psutil==5.9.5
 pycaw==20230407
 pydub==0.25.1
 python-dotenv==1.0.0
+pyttsx3==2.90
 Requests==2.31.0
 screen_brightness_control==0.22.1
+SpeechRecognition==3.10.0
