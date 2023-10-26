@@ -21,7 +21,7 @@ def text_to_voice(text):
     # Adjusting the rate and volume
     engine.setProperty("rate", 185)  # Adjust the speed as needed
     engine.setProperty("volume", 1)  # Adjust the volume level (0.0 to 1.0)
-    engine.say("Hello, how may I assist you today?")
+    engine.say(text)
     engine.runAndWait()
 
 
@@ -41,9 +41,12 @@ def voice_to_text():
         print("Decoded Text : {}".format(text))
         return {"transcription": text}
     except sr.UnknownValueError:
-        return {"error": "Could not understand audio"}
+        return {"error": "Could not understand audio", "transcription": ""}
     except sr.RequestError or Exception as e:
-        return {"error": "Could not request results; {0}".format(e)}
+        return {
+            "error": "Could not request results; {0}".format(e),
+            "transcription": "",
+        }
 
 
 def load_chunks(filename):
