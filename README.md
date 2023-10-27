@@ -1,7 +1,5 @@
 # Smart FaceAuth Jarvis
 
-![Smart FaceAuth Jarvis Logo](path_to_logo.png) *(Optional: Add a project logo if you have one)*
-
 Smart FaceAuth Jarvis is an advanced authentication system that combines the power of facial recognition with voice command processing. Built on top of state-of-the-art deep learning models, it offers a seamless and secure user experience.
 
 ## 🌟 Features
