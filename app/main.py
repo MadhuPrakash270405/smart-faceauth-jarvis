@@ -61,6 +61,18 @@ def perform_voice_verification():
         print(f"Error in voice verification: {e}")
 
 
+def process_command():
+    audio_trans = voice_to_text()
+    transcription = audio_trans.get("transcription")
+    if 'weather' in command_text:
+        get_weather_info()
+    elif 'wi-fi' in command_text or 'wifi' in command_text:
+        control_wifi()
+    elif 'volume' in command_text or 'sound' in command_text:
+        control_volume()
+    else:
+        print("Command not recognized, please try again.")
+        
 def process_frame(frame, background_img, mask):
     try:
         frame = cv2.flip(frame, 1)
@@ -132,6 +144,7 @@ def main():
                 match_found = detect_faces(frame, known_face_encodings)
                 if match_found:
                     perform_voice_verification()
+                    
                     break
 
             background_img = process_frame(frame, background_img, mask)

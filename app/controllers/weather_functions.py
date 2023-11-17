@@ -1,6 +1,9 @@
-import requests
+import sqlite3
 import os
-from datetime import datetime
+import requests
+from datetime import datetime, timedelta
+
+import json
 from dotenv import load_dotenv
 
 # Load the .env file
@@ -9,81 +12,127 @@ api_key = os.getenv("WEATHER_API_KEY")
 # Replace with your OpenWeatherMap API key
 
 
-# Specify the city and optionally the country code (e.g., London,uk)
-location = "Cleveland"
-# Specify the particular date (format: YYYY-MM-DD)
+def setup_database():
+    conn = sqlite3.connect("weather_cache.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS weather_cache (
+            date TEXT,
+            location TEXT,
+            data TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (date, location)
+        )
+    """
+    )
+    conn.commit()
+    conn.close()
 
-# Get the current date
-current_date = datetime.now().strftime("%Y-%m-%d")
 
-# Print the date in the format YYYY-MM-DD
+setup_database()
 
 
-def check_the_date(dateStr):
-    # Given date in 'YYYY-MM-DD' format
+def get_cached_weather(date, location):
+    conn = sqlite3.connect("weather_cache.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT data FROM weather_cache WHERE date = ? AND location = ?",
+        (date, location),
+    )
+    result = cursor.fetchone()
+    conn.close()
+    return json.loads(result[0]) if result else None
+
+
+def cache_weather(date, location, data):
+    conn = sqlite3.connect("weather_cache.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO weather_cache (date, location, data) VALUES (?, ?, ?)",
+        (date, location, json.dumps(data)),
+    )
+    conn.commit()
+    conn.close()
+
+
+def check_weather_type(dateStr):
     given_date = datetime.strptime(dateStr, "%Y-%m-%d").date()
-
-    # Get today's date
     current_date = datetime.now().date()
-    print(given_date, current_date)
-    # Compare the given date with today's date
+    # print({"given_date": given_date, "current_date": current_date})
+    if given_date == current_date:
+        return "current"
     if given_date < current_date:
         return "history"
-    elif given_date == current_date:
-        return "current"
     else:
         return "forecast"
 
 
-# Make a request to the WeatherAPI for the forecast
+def weather_for_one_week(location):
+    current_date_str = datetime.now().strftime("%Y-%m-%d")
+    for i in range(7):
+        specific_date = (datetime.now() + timedelta(days=i)).strftime("%Y-%m-%d")
+        specific_date_weather(specific_date, location)
+        print("============================================================")
 
 
-def specific_date_weather(specific_date):
-    url = f"http://api.weatherapi.com/v1/{check_the_date(specific_date)}.json?key={api_key}&q={location}&dt={specific_date}"
-    print(url)
-    # Fetch the weather details for the particular date
-    response = requests.get(url)
-    data = response.json()
+def specific_date_weather(specific_date, location):
+    weather_type = check_weather_type(specific_date)
+    endpoint = (
+        "current"
+        if weather_type == "current"
+        else "forecast"
+        if weather_type == "forecast"
+        else "history"
+    )
+    cached_weather = get_cached_weather(specific_date, location)
+    if cached_weather:
+        print(f"Using cached data for {specific_date} in {location}")
+        data = cached_weather
+    else:
+        url = f"http://api.weatherapi.com/v1/{endpoint}.json?key={api_key}&q={location}"
+        if weather_type != "current":
+            url += f"&dt={specific_date}"
+
+        response = requests.get(url)
+        data = response.json()
+        if response.status_code == 200:
+            cache_weather(specific_date, location, data)
+        else:
+            print(f"Failed to retrieve data: {data}")
+            return
 
     # Print the weather details
-    if response.status_code == 200:
-        max_temp = data["forecast"]["forecastday"][0]["day"]["maxtemp_c"]
-        min_temp = data["forecast"]["forecastday"][0]["day"]["mintemp_c"]
-        condition = data["forecast"]["forecastday"][0]["day"]["condition"]["text"]
-        print(f"On {specific_date}, in {location}:")
+    if weather_type == "current":
+        print_current_weather(data, location)
+    else:
+        print_forecast_or_history_weather(data, specific_date, location, weather_type)
+
+
+def print_current_weather(data, location):
+    current_temp = data["current"]["temp_c"]
+    condition = data["current"]["condition"]["text"]
+    print(f"Current weather in {location}:")
+    print(f"Temperature: {current_temp}°C")
+    print(f"Condition: {condition}")
+
+
+def print_forecast_or_history_weather(data, specific_date, location, weather_type):
+    if "forecast" in data:
+        weather_data = data["forecast"]["forecastday"][0]
+        max_temp = weather_data["day"]["maxtemp_c"]
+        min_temp = weather_data["day"]["mintemp_c"]
+        condition = weather_data["day"]["condition"]["text"]
+        weather_desc = "forecast" if weather_type == "forecast" else "historical"
+        print(f"On {specific_date}, the {weather_desc} weather in {location} was:")
         print(f"Max Temperature: {max_temp}°C")
         print(f"Min Temperature: {min_temp}°C")
         print(f"Condition: {condition}")
     else:
-        print(f"Failed to retrieve data: {data}")
+        print(f"No {weather_type} data available for {specific_date} in {location}")
 
 
-def weather_for_one_week():
-    url = (
-        f"http://api.weatherapi.com/v1/forecast.json?key={api_key}&q={location}&days=7"
-    )
-    # Fetch the weather forecast
-    response = requests.get(url)
-    data = response.json()
-    # Print the weather forecast for the next week and for the specific date
-    weather_for_week = []
-    if response.status_code == 200:
-        # Print forecast for each day in the next week
-        for forecast in data["forecast"]["forecastday"]:
-            date = forecast["date"]
-            condition = forecast["day"]["condition"]["text"]
-            max_temp = forecast["day"]["maxtemp_c"]
-            min_temp = forecast["day"]["mintemp_c"]
-            print(
-                f"On {date}, the weather in {location} is expected to be {condition.lower()} with a high of {max_temp}°C and a low of {min_temp}°C."
-            )
-            weather_for_week.append(
-                f"On {date}, the weather in {location} is expected to be {condition.lower()} with a high of {max_temp}°C and a low of {min_temp}°C."
-            )
+location = "Cleveland"
+weather_for_one_week(location)
 
-    else:
-        print(f"Failed to retrieve data: {data}")
-    return weather_for_week
-
-
-# weather_for_one_week()
+# specific_date_weather("2023-11-18", location)
